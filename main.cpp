@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
 #include <zlib.h>
+
+#include <time.h>
+
 #ifdef _MSC_VER
 #	pragma pack( push, packing )
 #	pragma pack( 1 )
@@ -12,6 +15,53 @@
 #else
 #	error you must byte-align these structures with the appropriate compiler directives
 #endif
+
+
+#ifndef HIBYTE
+#define HIBYTE(x)       ((((u_int)(x)) & 0xff00)>>8)
+#endif
+      
+#ifndef LOBYTE
+#define LOBYTE(x)       (((u_int)(x)) & 0x00ff)
+#endif
+
+int usc2utf8(unsigned char* pUCS,int lenUCS,unsigned char* pUTF8)
+{
+    int UCSlen = 0, UTF8len = 0;
+    unsigned char* pTempUTF8 = NULL;
+    UCSlen = lenUCS*2;
+   
+    if(pUCS == NULL || pUTF8 == NULL)
+	return -1;
+       
+    pTempUTF8 = pUTF8;
+    for(int i = 0; i < UCSlen; i+=2)
+    {
+	unsigned int tt = pUCS[i] | (pUCS[i+1] << 8);
+        if(tt   <=   0x007F)//1   byte   0xxxxxxx   
+        {   
+    	    *(pTempUTF8++)   =   LOBYTE(tt);   
+    	    UTF8len++;   
+        }   
+        else   if(tt   <=0x07FF)//2   bytes   110xxxxx   10xxxxxx   
+        {   
+    	    *(pTempUTF8++)   =   HIBYTE(tt   <<   2)   &   0x3F   |   0xC0;   
+    	    *(pTempUTF8++)   =   LOBYTE(tt   &   0x3f)   |   0x80;   
+    	    UTF8len   +=   2;   
+        }   
+        else//3   bytes   1110xxxx   10xxxxxx   10xxxxxx   
+        {   
+    	    *(pTempUTF8++)   =   HIBYTE(pUCS[i]   >>   4)   |   0xe0;   
+    	    *(pTempUTF8++)   =   HIBYTE(pUCS[i]   <<   2)   &   0x3F   |   0x80;   
+    	    *(pTempUTF8++)   =   LOBYTE(pUCS[i])   &   0x3F   |   0x80;   
+    	    UTF8len   +=   3;   
+        }   
+    }
+    *pTempUTF8 ='\0';
+    return UTF8len;
+}
+
+
 
 static char USAGE[]={                                                                                                            
    "\tunback [options]\n"                                            
@@ -116,19 +166,37 @@ void parse5(char * b, int size)
 //	long long times = time/1000/1000;
 //	printf("File time sec - %ld\n",times);	
 	printf("[Parse5] Time??? - %02d:%02d:%02d\n",(time/1000/1000/60/60)%24,(time/1000/1000/60)%60,(time/1000/1000)%60);
+//TODO: use strftime for display time
+    time_t sec = time/1000/60;
+    struct tm ttt;
+    struct tm* brokenTime = gmtime_r(&sec,&ttt);
+//    if (!brokenTime)
+    char buf[64];
+     strftime(buf,sizeof(buf),"%Y-%m-%d %H:%M:%S",brokenTime);
+     printf("[Parse5] Time??? - %s\n",buf);
+
+				     
 	
+	
+//	wchar_t * fname = new wchar_t[fnsize];
 	
 	char * fname = new char[fnsize*2];
 	memcpy(fname,b + cur,fnsize*2);
 	cur += fnsize*2;
         char * tmp = new char[fnsize*2];
-        int j =0;
-        for(int i=0; i<fnsize*2; i++) if(fname[i] != 0) tmp[j++]=fname[i];
-        tmp[j] = '\0';
+        int j = 0;
+	
+	usc2utf8((unsigned char*)fname,fnsize,(unsigned char*)tmp);
+	printf("%s\n",tmp);
+//	for(int i=0; i<strlen(tmp); i++) printf("%c -- %x\n",(unsigned char)tmp[i],(unsigned char)tmp[i]);
+//	for(int i=0; i<fnsize*2; i++) printf("%c -- %x\n",(unsigned char)fname[i],(unsigned char)fname[i]);
+//        for(int i=0; i<fnsize*2; i++) if(fname[i] != 0) tmp[j++]=fname[i];
+//        tmp[j] = '\0';
         printf("[Parse5] File name  - %s\n",tmp);
 	char fn [255];
 	sprintf(fn,"data%c%s", DELIM, getfname(tmp));
 	printf("[Parse5] File name for save - %s\n",fn);
+
 	FILE * fo = fopen(fn,"wb");
 	if(fo!=NULL)
 	{
@@ -405,7 +473,6 @@ int main(int argc, char** argv)
     printf("Input file '%s'\n",infile);
     printf("Debug level '%d'\n",dbglvl);
     
-    return 0;
     FILE * fp=fopen(infile,"rb");
     
     if(!fp)
