@@ -27,6 +27,10 @@
 
 #include <time.h>
 
+#include <sys/stat.h>
+#include <sys/types.h>
+	      
+
 #ifdef _MSC_VER
 #	pragma pack( push, packing )
 #	pragma pack( 1 )
@@ -103,6 +107,64 @@ struct rt
     unsigned int size;
     unsigned int unkn[4]; //????
 } PACK_STRUCT;
+
+
+
+/*
+For win32. not tested
+
+void r_mkdir(const char *dir) 
+{
+    char tmp[256];
+    char *p = NULL;
+    size_t len;
+    snprintf(tmp, sizeof(tmp),"data\\%s",dir);
+    printf("++%s\n",tmp);
+    
+    len = strlen(tmp);
+    if(tmp[len - 1] == '/')
+            tmp[len - 1] = '\0';
+    for(p = tmp + 1; *p; p++)
+        if(*p == '\\') 
+	{
+	    *p = '\0';
+	    printf("++%s\n",tmp);
+	    if(_access(tmp, 0))
+		_mkdir(tmp);
+	    *p = '\\';
+	}
+//    if(_access(tmp, 0))
+//    	_mkdir(tmp);
+}
+
+
+*/
+
+
+
+void r_mkdir(const char *dir) 
+{
+    char tmp[256];
+    char *p = NULL;
+    size_t len;
+    snprintf(tmp, sizeof(tmp),"data\\%s",dir);
+    printf("++%s\n",tmp);
+    
+    len = strlen(tmp);
+    if(tmp[len - 1] == '/')
+            tmp[len - 1] = '\0';
+    for(p = tmp + 1; *p; p++)
+        if(*p == '\\') 
+	{
+	    *p = '\0';
+	    printf("++%s\n",tmp);
+	    if(access(tmp, F_OK))
+		mkdir(tmp, S_IRWXU);
+	    *p = '/';
+	}
+//    if(access(tmp, F_OK))
+//    	mkdir(tmp, S_IRWXU);
+}
 
 
 char * getfname(char * name)
@@ -215,6 +277,7 @@ void parse5(char * b, int size)
 //	for(int i=0; i<fnsize*2; i++) printf("%c -- %x\n",(unsigned char)fname[i],(unsigned char)fname[i]);
 //        for(int i=0; i<fnsize*2; i++) if(fname[i] != 0) tmp[j++]=fname[i];
 //        tmp[j] = '\0';
+//	r_mkdir(tmp);
         printf("[Parse5] File name  - %s\n",tmp);
 	char fn [255];
 	sprintf(fn,"data%c%s", DELIM, getfname(tmp));
