@@ -26,6 +26,7 @@
 #include <zlib.h>
 
 #include <time.h>
+#include <stdint.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -242,25 +243,23 @@ void parse5(char * b, int size)
 	cur += 4;
 	printf("[Parse5] Unknown 2 - %x\n",unkn2);
 	
-	unsigned long long int time = 0;
-//	printf("==== %d==\n",sizeof(time));
-	if(sizeof(time) == 8)
-	    memcpy(&time,b + cur,8);
+	uint64_t time = 0;
+	
+	memcpy(&time,b + cur,8);
 	cur += 8; //time
 	printf("[Parse5] File time - %llx\n",time);
-//	long long times = time/1000/1000;
-//	printf("File time sec - %ld\n",times);	
-	printf("[Parse5] Time??? - %02d:%02d:%02d\n",(time/1000/1000/60/60)%24,(time/1000/1000/60)%60,(time/1000/1000)%60);
-//TODO: use strftime for display time
-    time_t sec = time/1000/60;
-    struct tm ttt;
-    struct tm* brokenTime = gmtime_r(&sec,&ttt);
-//    if (!brokenTime)
-    char buf[64];
-     strftime(buf,sizeof(buf),"%Y-%m-%d %H:%M:%S",brokenTime);
-     printf("[Parse5] Time??? - %s\n",buf);
+	
+//      uint64_t timestamp = uint64_t(time(NULL))*1000000 + 0xDCDDB3E5D20000LL;
+//      timeLo = (timestamp >> 0) & 0xffffffff;
+//      timeHi = (timestamp >> 32) & 0xffffffff;
 
-				     
+	time_t sec = (time - 0xDCDDB3E5D20000LL)/1000000; //convert Symbian time (0000-01-01 00:00:00) to UNIX time (1970-01-01 00:00:00)
+	struct tm ttt;
+	char buf[64];
+
+	struct tm* brokenTime = gmtime_r(&sec,&ttt);
+	strftime(buf,sizeof(buf),"%Y-%m-%d %H:%M:%S",brokenTime);
+	printf("[Parse5] Time - %s\n",buf);
 	
 	
 //	wchar_t * fname = new wchar_t[fnsize];
