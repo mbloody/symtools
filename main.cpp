@@ -27,6 +27,7 @@
 
 #include <time.h>
 #include <stdint.h>
+#include <utime.h>
 
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -262,8 +263,6 @@ void parse5(char * b, int size)
 	printf("[Parse5] Time - %s\n",buf);
 	
 	
-//	wchar_t * fname = new wchar_t[fnsize];
-	
 	char * fname = new char[fnsize*2];
 	memcpy(fname,b + cur,fnsize*2);
 	cur += fnsize*2;
@@ -272,11 +271,9 @@ void parse5(char * b, int size)
 	
 	usc2utf8((unsigned char*)fname,fnsize,(unsigned char*)tmp);
 	printf("%s\n",tmp);
-//	for(int i=0; i<strlen(tmp); i++) printf("%c -- %x\n",(unsigned char)tmp[i],(unsigned char)tmp[i]);
-//	for(int i=0; i<fnsize*2; i++) printf("%c -- %x\n",(unsigned char)fname[i],(unsigned char)fname[i]);
-//        for(int i=0; i<fnsize*2; i++) if(fname[i] != 0) tmp[j++]=fname[i];
-//        tmp[j] = '\0';
+
 //	r_mkdir(tmp);
+
         printf("[Parse5] File name  - %s\n",tmp);
 	char fn [255];
 	sprintf(fn,"data%c%s", DELIM, getfname(tmp));
@@ -291,6 +288,12 @@ void parse5(char * b, int size)
 	else
 	    printf("[Parse5] Error create file %s\n",tmp);
 	cur+=fsize;
+	
+//set file time
+	struct utimbuf ftm;
+	ftm.actime = ftm.modtime = sec;
+	utime(fn,&ftm);
+
         delete [] fname;
         delete [] tmp;
 
